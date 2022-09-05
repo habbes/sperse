@@ -13,3 +13,13 @@ The expressions the user enters can either be execute locally on the client by i
 The user can use the results of a remote execution to compute new expressions before they have arrived. The client's engine will automatically keep track of all pending results and all expressions that depend on pending results. When these results are ready, the engine will propagate these values to all the variables and expressions that depend on them. This is the **reactive** part of the system.
 
 There might be multiple remote servers. The client can send expression to a particular server based on some constraints. For example, if the expression reads from a database, it will be sent to a server that can connect to the database. The client can also distribute work to different servers, for example when computing the sum of a large set of numbers. On server can handle half the input, and another server the other half. Then the client can transparently merge the results. This is the **distributed** part of the system.
+
+# Tentative road-map for the proof-of-concept
+
+The PoC is meant to be quick implementation that explores the feasibility of the idea and demonstrates its key concepts practically on a reduce scope.
+
+- [x] Create basic interpreter supporting variable assignment and simple arithmetic expressions (or just +)
+- [ ] Simulate remote execution and reactive value propagation by delaying execution of expressions with `remote` keyword
+- [ ] Create server app that can execute expressions. gRPC for client-server communication
+- [ ] Implement basic code and dependency serialization
+- [ ] Send remote expressions to server for execution, propagate result values to pending variables on the client on response
