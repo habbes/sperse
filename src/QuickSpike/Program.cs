@@ -13,6 +13,11 @@ while (true)
         break;
     }
 
+    if (input == "")
+    {
+        continue;
+    }
+
     object value = eval.Execute(input);
     Console.WriteLine(value);
 }

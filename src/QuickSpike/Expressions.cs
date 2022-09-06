@@ -5,6 +5,11 @@ abstract class Expression
     public abstract object Evaluate(EvaluationContext context);
 }
 
+abstract class ReactiveExpression : Expression
+{
+    public abstract void Update(EvaluationContext context);
+}
+
 class AssignmentExpression : Expression
 {
     private string id;
@@ -19,7 +24,14 @@ class AssignmentExpression : Expression
     public override object Evaluate(EvaluationContext context)
     {
         var value = this.expression.Evaluate(context);
-        context.SymbolTable.SetSymbol(this.id, value);
+        if (value is PendingValue)
+        {
+            context.SymbolTable.SetSymbol(this.id, this.expression);
+        }
+        else
+        {
+            context.SymbolTable.SetSymbol(this.id, value);
+        }
 
         return value;
     }
@@ -68,14 +80,22 @@ class VarExpression : Expression
 
     public override object Evaluate(EvaluationContext context)
     {
-        return context.SymbolTable.GetSymbol(this.id);
+        object value = context.SymbolTable.GetSymbol(this.id);
+        if (value is Expression expression)
+        {
+            return expression.Evaluate(context);
+        }
+
+        return value;
     }
 }
 
-class FutureValueExpression : Expression
+class FutureValueExpression : ReactiveExpression
 {
     private readonly Expression innerExpression;
     public Guid Id { get; } = Guid.NewGuid();
+    private object? value = null;
+    int status = 0;
 
     public FutureValueExpression(Expression innerExpression)
     {
@@ -85,10 +105,75 @@ class FutureValueExpression : Expression
     
     public override object Evaluate(EvaluationContext context)
     {
-        context.DelayedTracker.DelayExecute(Id, innerExpression);
-        return new PendingValue(Id);
+        if (status == 0)
+        {
+            status = 1;
+            context.DelayedTracker.DelayExecute(Id, this, innerExpression);
+            status = 1;
+            return new PendingValue(Id);
+        }
+        else if (status == 1)
+        {
+            return new PendingValue(Id);
+        }
+
+        return value;
+    }
+
+    public override void Update(EvaluationContext context)
+    {
+        object value = context.DelayedTracker.GetValue(Id);
+        if (value is PendingValue)
+        {
+            return;
+        }
+
+        this.value = value;
+        status = 2;
     }
 }
+
+//class PendingValueExpression : ReactiveExpression
+//{
+//    private readonly FutureValueExpression innerExpression;
+//    public Guid Id { get; } = Guid.NewGuid();
+//    int status = 0;
+//    object? value = null;
+
+//    public PendingValueExpression(FutureValueExpression expression)
+//    {
+//        this.innerExpression = expression;
+//    }
+
+//    public override object Evaluate(EvaluationContext context)
+//    {
+//        if (status == 0)
+//        {
+//            status = 1;
+//            context.DelayedTracker.AddDependent(innerExpression.Id, Id, this);
+//            status = 1;
+//            return new PendingValue(Id);
+//        }
+//        else if (status == 1)
+//        {
+//            return new PendingValue(Id);
+//        }
+
+//        return value;
+//    }
+
+//    public override void Update(EvaluationContext context)
+//    {
+//        object value = context.DelayedTracker.GetValue(Id);
+//        if (value is PendingValue)
+//        {
+//            return;
+//        }
+
+//        this.value = value;
+//        status = 2;
+//    }
+//}
 
 record struct PendingValue(Guid Id);
 
