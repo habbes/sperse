@@ -3,11 +3,11 @@
 abstract class Expression
 {
     public abstract object Evaluate(EvaluationContext context);
+    public abstract object Update(EvaluationContext context, Guid parent, object value);
 }
 
 abstract class ReactiveExpression : Expression
 {
-    public abstract void Update(EvaluationContext context);
 }
 
 class AssignmentExpression : Expression
@@ -24,9 +24,10 @@ class AssignmentExpression : Expression
     public override object Evaluate(EvaluationContext context)
     {
         var value = this.expression.Evaluate(context);
-        if (value is PendingValue)
+        if (value is PendingValue parentPendingValue)
         {
-            context.SymbolTable.SetSymbol(this.id, this.expression);
+            PendingValue pendingValue = context.ValueTracker.AddDependency(parentPendingValue.Id, this);
+            context.SymbolTable.SetSymbol(this.id, pendingValue);
         }
         else
         {
@@ -35,12 +36,23 @@ class AssignmentExpression : Expression
 
         return value;
     }
+
+    public override object Update(EvaluationContext context, Guid parent, object value)
+    {
+        context.SymbolTable.SetSymbol(this.id, value);
+        return value;
+    }
 }
 
 class AddExpression : Expression
 {
     private Expression left;
     private Expression right;
+    private PendingValue leftPendingValue;
+    private PendingValue rightPendingValue;
+    private PendingValue temp;
+    private int? leftValue;
+    private int? rightValue;
 
     public AddExpression(Expression left, Expression right)
     {
@@ -50,7 +62,58 @@ class AddExpression : Expression
 
     public override object Evaluate(EvaluationContext context)
     {
+        object leftValue = this.left.Evaluate(context);
+        object rightValue = this.right.Evaluate(context);
+        Guid id = Guid.NewGuid();
+        PendingValue pendingValue = default;
+
+        if (leftValue is PendingValue leftPendingValue)
+        {
+            this.leftPendingValue = leftPendingValue;
+            pendingValue = context.ValueTracker.AddDependency(leftPendingValue.Id, id, this);
+        }
+        else
+        {
+            this.leftValue = (int)leftValue;
+        }
+
+        if (rightValue is PendingValue rightPendingValue)
+        {
+            this.rightPendingValue = rightPendingValue;
+            pendingValue = context.ValueTracker.AddDependency(rightPendingValue.Id, id, this);
+        }
+        else
+        {
+            this.rightValue = (int)rightValue;
+        }
+
+        if (pendingValue.Id != Guid.Empty)
+        {
+            temp = pendingValue;
+            return pendingValue;
+        }
+
         return (int)this.left.Evaluate(context) + (int)this.right.Evaluate(context);
+    }
+
+    public override object Update(EvaluationContext context, Guid parent, object value)
+    {
+        if (this.leftPendingValue.Id == parent)
+        {
+            this.leftValue = (int)value;
+        }
+
+        if (this.rightPendingValue.Id == parent)
+        {
+            this.rightValue = (int)value;
+        }
+
+        if (this.leftValue != null && this.rightValue != null)
+        {
+            return leftValue + rightValue;
+        }
+
+        return temp;
     }
 }
 
@@ -67,6 +130,11 @@ class IntExpression : Expression
     {
         return this.value;
     }
+
+    public override object Update(EvaluationContext context, Guid parent, object value)
+    {
+        return value;
+    }
 }
 
 class VarExpression : Expression
@@ -81,19 +149,19 @@ class VarExpression : Expression
     public override object Evaluate(EvaluationContext context)
     {
         object value = context.SymbolTable.GetSymbol(this.id);
-        if (value is Expression expression)
-        {
-            return expression.Evaluate(context);
-        }
-
         return value;
+    }
+
+    public override object Update(EvaluationContext context, Guid parent, object value)
+    {
+        throw new NotImplementedException();
     }
 }
 
 class FutureValueExpression : ReactiveExpression
 {
     private readonly Expression innerExpression;
-    public Guid Id { get; } = Guid.NewGuid();
+    public PendingValue pendingValue;
     private object? value = null;
     int status = 0;
 
@@ -107,29 +175,30 @@ class FutureValueExpression : ReactiveExpression
     {
         if (status == 0)
         {
+            pendingValue = context.ValueTracker.Add(this);
             status = 1;
-            context.DelayedTracker.DelayExecute(Id, this, innerExpression);
+            context.DelayedTracker.DelayExecute(pendingValue.Id, this, innerExpression);
             status = 1;
-            return new PendingValue(Id);
+            return pendingValue;
         }
         else if (status == 1)
         {
-            return new PendingValue(Id);
+            return pendingValue;
         }
 
         return value;
     }
 
-    public override void Update(EvaluationContext context)
+    public override object Update(EvaluationContext context, Guid id, object value)
     {
-        object value = context.DelayedTracker.GetValue(Id);
         if (value is PendingValue)
         {
-            return;
+            return value;
         }
 
         this.value = value;
         status = 2;
+        return value;
     }
 }
 

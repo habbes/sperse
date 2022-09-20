@@ -19,10 +19,12 @@ class EvaluationContext
 {
     public SymbolTable SymbolTable { get; private set; } = new();
     public DelayedOperationTracker DelayedTracker { get; private set; }
+    public ValueTracker ValueTracker { get; private set; }
 
     public EvaluationContext()
     {
         this.DelayedTracker = new(this);
+        this.ValueTracker = new(this);
     }
 }
 
@@ -55,12 +57,12 @@ class DelayedOperationTracker
     {
         Entry entry = new(id, expression);
         this.entries.Add(id, entry);
-        await Task.Delay(4000);
+        await Task.Delay(8000);
         object value = expression.Evaluate(this.context);
         entry.Value = value;
 
         Console.WriteLine($"Expression Id {id} completed. Value = {value}");
-        wrapper.Update(this.context);
+        this.context.ValueTracker.Update(id, value);
         // propagate values
     }
 
@@ -106,5 +108,70 @@ class DelayedOperationTracker
     {
         Pending,
         Success
+    }
+}
+
+class ValueTracker
+{
+    private readonly EvaluationContext context;
+    Dictionary<Guid, Expression> expressions = new();
+    Dictionary<Guid, List<Guid>> dependencies = new();
+
+    public ValueTracker(EvaluationContext context)
+    {
+        this.context = context;
+    }
+
+    public PendingValue AddDependency(Guid parent, Expression expression)
+    {
+        var childId = Guid.NewGuid();
+        return this.AddDependency(parent, childId, expression);
+    }
+
+    public PendingValue AddDependency(Guid parent, Guid childId, Expression expression)
+    {
+        expressions.Add(childId, expression);
+        List<Guid> deps;
+        if (dependencies.TryGetValue(parent, out deps))
+        {
+            deps.Add(childId);
+        }
+        else
+        {
+            deps = new List<Guid>();
+            deps.Add(childId);
+            dependencies.Add(parent, deps);
+        }
+
+        return new PendingValue(childId);
+    }
+
+    public PendingValue Add(Expression expression)
+    {
+        var id = Guid.NewGuid();
+        expressions.Add(id, expression);
+        return new PendingValue(id);
+    }
+
+    public void Update(Guid id, object value)
+    {
+        //var expression = this.expressions[id];
+        if (this.dependencies.TryGetValue(id, out var deps))
+        {
+            
+            foreach (var dep in deps)
+            {
+                Expression child = this.expressions[dep];
+                object childValue = child.Update(this.context, id, value);
+                if (!(childValue is PendingValue))
+                {
+                    // propagate value to children
+                    this.Update(dep, childValue);
+                }
+            }
+        }
+
+        this.expressions.Remove(id);
+        this.dependencies.Remove(id);
     }
 }
