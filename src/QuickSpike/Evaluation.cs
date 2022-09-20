@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace QuickSpike;
+﻿namespace QuickSpike;
 
 class Evaluator
 {
@@ -13,7 +7,7 @@ class Evaluator
     public object Execute(string input)
     {
         Lexer lexer = new Lexer(input);
-        TokenStream tokens = lexer.Tokenize();
+        using TokenStream tokens = lexer.Tokenize();
         Parser parser = new Parser(tokens);
         Expression expression = parser.ParseExpression();
         return expression.Evaluate(context);
