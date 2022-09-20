@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Grpc.Core;
+using Grpc.Net.Client;
 
 namespace QuickSpike;
 
@@ -49,16 +51,28 @@ class SymbolTable
 
 class DelayedOperationTracker
 {
+    GrpcChannel channel;
+    Greeter.GreeterClient client;
+
     Dictionary<Guid, Entry> entries = new();
     EvaluationContext context;
 
     public DelayedOperationTracker(EvaluationContext context)
     {
         this.context = context;
+        this.channel = GrpcChannel.ForAddress("http://localhost:5041");
+        this.client = new Greeter.GreeterClient(channel);
     }
     
     public async Task DelayExecute(Guid id, ReactiveExpression wrapper, Expression expression)
     {
+
+        // grpc piece
+        Console.WriteLine("Getting ready to make gRPC call");
+        var response = await client.SayHelloAsync(new HelloRequest { Name = "World" });
+        Console.WriteLine(response.Message);
+        // end grpc piece
+
         Entry entry = new(id, expression);
         this.entries.Add(id, entry);
         await Task.Delay(4000);
