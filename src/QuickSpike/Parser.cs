@@ -1,76 +1,106 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace QuickSpike;
 
 class Lexer
 {
-    public TokenStream Tokenize(string input)
+    private static readonly TokenRule[] TokenRules = new[]
     {
-        return new TokenStream(GetTokens(input));
+        new TokenRule(new Regex(@"^\s+"), TokenType.WhiteSpace),
+        new TokenRule(new Regex(@"^\("), TokenType.OpenParen),
+        new TokenRule(new Regex(@"^\)"), TokenType.ClosedParen),
+        new TokenRule(new Regex(@"^="), TokenType.Assgn),
+        new TokenRule(new Regex(@"^\+"), TokenType.Plus),
+        new TokenRule(new Regex(@"^remote"), TokenType.Remote),
+        new TokenRule(new Regex(@"^[1-9]\d*"), TokenType.IntConst),
+        new TokenRule(new Regex(@"^[a-zA-Z\.]+"), TokenType.Identifier),
+    };
+
+    private readonly string source;
+    private int currentIndex = 0;
+
+    public Lexer(string source)
+    {
+        this.source = source;
     }
 
-    List<Token> GetTokens(string input)
+    public TokenStream Tokenize()
     {
-        var tokens = input.Split(" ");
-        return tokens.Select(t => t.Trim())
-            .Where(t => t != "")
-            .Select(value => GetToken(value))
-            .ToList();
+        return new TokenStream(GetTokens().GetEnumerator());
     }
 
-    Token GetToken(string value)
+    IEnumerable<Token> GetTokens()
     {
-        if (value == "=")
+        bool isDone = false;
+
+        while (!isDone)
         {
-            return new Token(value, TokenType.Assgn);
+            var result = TryGetNextToken(out Token token);
+            if (!result)
+            {
+                throw new Exception($"Invalid syntax at '{source.AsSpan().Slice(currentIndex, Math.Min(10, source.Length - currentIndex))}'");
+            }
+
+            if (token.Type == TokenType.WhiteSpace)
+            {
+                continue;
+            }
+
+            isDone = token.Type == TokenType.Eof;
+            yield return token;
+        }
+    }
+
+    private bool TryGetNextToken(out Token token)
+    {
+        token = default;
+
+        if (currentIndex == source.Length)
+        {
+            token = new Token("", TokenType.Eof);
+            return true;
         }
 
-        if (value == "+")
+        foreach (var rule in TokenRules)
         {
-            return new Token(value, TokenType.Plus);
+            var match = rule.Rule.Match(source, currentIndex, source.Length - currentIndex);
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            token = new Token(match.Value, rule.Type);
+
+            currentIndex = match.Index + match.Value.Length;
+
+            return true;
         }
 
-        if (value == "remote")
-        {
-            return new Token(value, TokenType.Remote);
-        }
-
-        if (value == "(")
-        {
-            return new Token(value, TokenType.OpenParen);
-        }
-
-        if (value == ")")
-        {
-            return new Token(value, TokenType.ClosedParen);
-        }
-
-        if (int.TryParse(value, out _))
-        {
-            return new Token(value, TokenType.IntConst);
-        }
-
-        return new Token(value, TokenType.Id);
+        return false;
     }
 }
 
 record struct Token(string Value, TokenType Type);
+record struct TokenRule(Regex Rule, TokenType Type);
 
 enum TokenType
 {
-    Id,
+    Identifier,
     Remote,
     IntConst,
     Assgn,
     Plus,
     OpenParen,
-    ClosedParen
+    ClosedParen,
+    WhiteSpace,
+    Eof
 }
-
 
 class Parser
 {
@@ -102,7 +132,7 @@ class Parser
         }
 
         token = this.tokens.Consume();
-        if (token.Type == TokenType.Id)
+        if (token.Type == TokenType.Identifier)
         {
             return new VarExpression(token.Value);
         }
@@ -117,7 +147,7 @@ class Parser
 
     private Expression ParseAssignment()
     {
-        Token idToken = this.tokens.ConsumeType(TokenType.Id);
+        Token idToken = this.tokens.ConsumeType(TokenType.Identifier);
         this.tokens.ConsumeType(TokenType.Assgn);
         Expression expression = this.ParseExpression();
 
@@ -136,7 +166,7 @@ class Parser
     private Expression ParseOperandExpression()
     {
         Token token = this.tokens.Consume();
-        if (token.Type == TokenType.Id)
+        if (token.Type == TokenType.Identifier)
         {
             return new VarExpression(token.Value);
         }
@@ -159,26 +189,31 @@ class Parser
     }
 }
 
-class TokenStream
+class TokenStream : IDisposable
 {
-    public TokenStream(List<Token> tokens)
+    private bool eof = false;
+    private IEnumerator<Token> iterator;
+    private int pos = 0;
+    private Queue<Token> peekBuffer = new Queue<Token>(2);
+
+    public TokenStream(IEnumerator<Token> tokens)
     {
-        Tokens = tokens;
-        Pos = 0;
+        this.iterator = tokens;
+        this.pos = 0;
     }
 
-    public IReadOnlyList<Token> Tokens { get; private set; }
-    public int Pos { get; private set; }
-    public bool Eof => Pos == Tokens.Count;
+    public int Pos => pos;
+
+    public bool Eof => eof;
 
     public Token Consume()
     {
-        if (Eof)
+        if (eof)
         {
             throw new Exception("Cannot seek past end of stream.");
         }
 
-        return this.Tokens[Pos++];
+        return ConsumeInternal();
     }
 
     public Token ConsumeType(TokenType type)
@@ -201,43 +236,122 @@ class TokenStream
             return false;
         }
 
-        token = this.Tokens[Pos++];
+        token = ConsumeInternal();
         return true;
     }
 
     public bool TryPeekAfterNext(out Token token)
     {
+        Debug.Assert(peekBuffer.Count <= 2);
         token = default;
 
-        if (Eof)
+        if (eof)
         {
             return false;
         }
 
-        if (Pos + 1 >= Tokens.Count)
+        if (peekBuffer.Count == 2)
+        {
+            // TODO: use a queue that allows efficiently peeking ahead
+            token = peekBuffer.ElementAt(1);
+            return false;
+        }
+
+        if (peekBuffer.Count == 1)
+        {
+            // already have one token in the peek buffer, we only need to peek one more ahead
+            if (peekBuffer.Peek().Type == TokenType.Eof)
+            {
+                return false;
+            }
+
+            token = PeekInternal();
+            return true;
+        }
+
+        // no token buffered, so we have to peek twice
+        if (PeekInternal().Type == TokenType.Eof)
         {
             return false;
         }
 
-        token = this.Tokens[Pos + 1];
+        token = PeekInternal();
         return true;
     }
 
     public bool TryPeek(out Token token)
     {
-        token = default;
+        if (TryGetPeeked(out token))
+        {
+            return true;
+        }
 
-        if (Eof)
+        if (eof)
+        {
+            token = default;
+            return false;
+        }
+
+        token = PeekInternal();
+        return true;
+    }
+    
+    public bool IsNextOfType(TokenType type)
+    {
+        return TryPeek(out Token token) && token.Type == type;
+    }
+
+    public void Dispose()
+    {
+        iterator.Dispose();
+    }
+
+    private bool TryGetPeeked(out Token peeked)
+    {
+        peeked = default;
+        if (peekBuffer.Count == 0)
         {
             return false;
         }
 
-        token = this.Tokens[Pos];
-        return true;
+        peeked = peekBuffer.Peek();
+        return false;
     }
 
-    public bool IsNextOfType(TokenType type)
+    private Token ConsumeInternal()
     {
-        return TryPeek(out Token token) && token.Type == type;
+        pos++;
+        Token token;
+
+        if (TryConsumePeeked(out token))
+        {
+            return token;
+        }
+
+        iterator.MoveNext();
+        token = iterator.Current;
+
+        eof = token.Type == TokenType.Eof;
+        return token;
+    }
+
+    private Token PeekInternal()
+    {
+        iterator.MoveNext();
+        Token token = iterator.Current;
+        peekBuffer.Enqueue(token);
+        return token;
+    }
+
+    private bool TryConsumePeeked(out Token peeked)
+    {
+        peeked = default;
+        if (peekBuffer.Count == 0)
+        {
+            return false;
+        }
+
+        peeked = peekBuffer.Dequeue();
+        return true;
     }
 }

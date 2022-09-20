@@ -12,8 +12,8 @@ class Evaluator
 
     public object Execute(string input)
     {
-        Lexer lexer = new Lexer();
-        TokenStream tokens = lexer.Tokenize(input);
+        Lexer lexer = new Lexer(input);
+        TokenStream tokens = lexer.Tokenize();
         Parser parser = new Parser(tokens);
         Expression expression = parser.ParseExpression();
         return expression.Evaluate(context);
