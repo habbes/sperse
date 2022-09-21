@@ -4,6 +4,48 @@ abstract class Expression
 {
     public abstract object Evaluate(EvaluationContext context);
     public abstract object Update(EvaluationContext context, Guid parent, object value);
+
+    public virtual void Accept(IExpressionVisitor visitor)
+    {
+        visitor.Visit(this);
+    }
+}
+
+interface IExpressionVisitor
+{
+    void Visit(Expression expression);
+    void VisitAssignment(AssignmentExpression expression);
+    void VisitAdd(AddExpression expression);
+    void VisitIntConst(IntExpression expression);
+    void VisitVar(VarExpression expression);
+}
+
+abstract class ExpressionVisitor : IExpressionVisitor
+{
+    public virtual void Visit(Expression expression)
+    {
+        if (expression is AddExpression addExpression)
+        {
+            this.VisitAdd(addExpression);
+        }
+        else if (expression is IntExpression intExpression)
+        {
+            this.VisitIntConst(intExpression);
+        }
+        else if (expression is VarExpression varExpression)
+        {
+            this.VisitVar(varExpression);
+        }
+        else if (expression is AssignmentExpression assignmentExpression)
+        {
+            this.VisitAssignment(assignmentExpression);
+        }
+    }
+
+    public abstract void VisitAssignment(AssignmentExpression expression);
+    public abstract void VisitAdd(AddExpression expression);
+    public abstract void VisitIntConst(IntExpression expression);
+    public abstract void VisitVar(VarExpression expression);
 }
 
 abstract class ReactiveExpression : Expression
@@ -59,6 +101,9 @@ class AddExpression : Expression
         this.left = left;
         this.right = right;
     }
+
+    public Expression Left => left;
+    public Expression Right => right;
 
     public override object Evaluate(EvaluationContext context)
     {
@@ -121,6 +166,8 @@ class IntExpression : Expression
 {
     private int value;
 
+    public int Value => value;
+
     public IntExpression(int value)
     {
         this.value = value;
@@ -145,6 +192,8 @@ class VarExpression : Expression
     {
         this.id = id;
     }
+
+    public string Identifier => id;
 
     public override object Evaluate(EvaluationContext context)
     {

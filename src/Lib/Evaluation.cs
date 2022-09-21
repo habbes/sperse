@@ -1,4 +1,6 @@
-﻿namespace QuickSpike;
+﻿using Lib;
+
+namespace QuickSpike;
 
 public class Evaluator
 {
@@ -45,7 +47,6 @@ class SymbolTable
 
 class DelayedOperationTracker
 {
-    Dictionary<Guid, Entry> entries = new();
     EvaluationContext context;
 
     public DelayedOperationTracker(EvaluationContext context)
@@ -55,45 +56,15 @@ class DelayedOperationTracker
     
     public async Task DelayExecute(Guid id, ReactiveExpression wrapper, Expression expression)
     {
-        Entry entry = new(id, expression);
-        this.entries.Add(id, entry);
-        await Task.Delay(8000);
-        object value = expression.Evaluate(this.context);
-        entry.Value = value;
+        var serializer = new ExpressionSerializer(this.context);
+        serializer.Visit(expression);
+        var serialized = serializer.GetSerializedExpression();
+        Console.WriteLine($"Serialized expression to '{serialized}'");
+        var remoteExecutor = new MockRemoteEvaluator();
+        object value = await remoteExecutor.Execute(serialized);
 
         Console.WriteLine($"Expression Id {id} completed. Value = {value}");
         this.context.ValueTracker.Update(id, value);
-        // propagate values
-    }
-
-    public void AddDependent(Guid parentId, Guid childId, Expression childExpression)
-    {
-        Entry entry = new(childId, childExpression);
-        this.entries.Add(childId, entry);
-        Entry parent = this.entries[parentId];
-        parent.Dependents.Add(childId);
-    }
-
-    public object GetValue(Guid id)
-    {
-        Entry entry = this.entries[id];
-        return entry.Value;
-    }
-
-    class Entry
-    {
-        public Entry(Guid id, Expression expression)
-        {
-            Id = id;
-            Expression = expression;
-            Value = new PendingValue(id);
-        }
-        public Guid Id { get; set; }
-        public Expression Expression { get; set; }
-        public List<Guid> Dependents { get; } = new();
-        public Status Status { get; set; } = Status.Pending;
-        public object Value { get; set; }
-
     }
 
     public enum Status
