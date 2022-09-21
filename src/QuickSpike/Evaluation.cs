@@ -130,7 +130,7 @@ class ValueTracker
 
     public PendingValue AddDependency(Guid parent, Guid childId, Expression expression)
     {
-        expressions.Add(childId, expression);
+        expressions.TryAdd(childId, expression);
         List<Guid> deps;
         if (dependencies.TryGetValue(parent, out deps))
         {
