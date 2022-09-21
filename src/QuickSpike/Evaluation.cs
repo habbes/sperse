@@ -52,7 +52,7 @@ class SymbolTable
 class DelayedOperationTracker
 {
     GrpcChannel channel;
-    Greeter.GreeterClient client;
+    RemoteEvaluation.RemoteEvaluationClient client;
 
     Dictionary<Guid, Entry> entries = new();
     EvaluationContext context;
@@ -61,20 +61,19 @@ class DelayedOperationTracker
     {
         this.context = context;
         this.channel = GrpcChannel.ForAddress("http://localhost:5041");
-        this.client = new Greeter.GreeterClient(channel);
+        this.client = new RemoteEvaluation.RemoteEvaluationClient(channel);
     }
     
     public async Task DelayExecute(Guid id, ReactiveExpression wrapper, Expression expression)
     {
-
-        // grpc piece
-        Console.WriteLine("Getting ready to make gRPC call");
-        var response = await client.SayHelloAsync(new HelloRequest { Name = "World" });
-        Console.WriteLine(response.Message);
-        // end grpc piece
-
         Entry entry = new(id, expression);
         this.entries.Add(id, entry);
+
+        // send dummy request to grpc server to test connectivity
+        var response = await client.EvaluateExpressionAsync(new ExprRequest { Expr = "World" });
+        // write the response
+        Console.WriteLine(response.Value);
+
         await Task.Delay(4000);
         object value = expression.Evaluate(this.context);
         entry.Value = value;

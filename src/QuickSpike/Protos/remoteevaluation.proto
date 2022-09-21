@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option csharp_namespace = "QuickSpike";
+
+package evaluation;
+
+service RemoteEvaluation {
+  rpc EvaluateExpression (ExprRequest) returns (ExprReply);
+}
+
+message ExprRequest {
+    string expr = 1;
+}
+
+message ExprReply {
+    string value = 1;
+}
