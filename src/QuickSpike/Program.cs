@@ -6,7 +6,7 @@ Evaluator eval = new Evaluator();
 
 while (true)
 {
-    string input = GetNextInput();
+    string input = GetNextInput().Trim();
     if (input == "exit")
     {
         Console.WriteLine("Bye!");
@@ -18,8 +18,16 @@ while (true)
         continue;
     }
 
-    object value = eval.Execute(input);
-    Console.WriteLine(value);
+    try
+    {
+        object value = eval.Execute(input);
+        Console.WriteLine(value);
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine($"ERROR: {e.Message}");
+    }
+    
 }
 
 string GetNextInput(string prompt = ">> ")
