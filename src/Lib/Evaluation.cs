@@ -1,4 +1,6 @@
 ﻿using Lib;
+using Grpc.Core;
+using Grpc.Net.Client;
 
 namespace QuickSpike;
 
@@ -48,10 +50,15 @@ class SymbolTable
 class DelayedOperationTracker
 {
     EvaluationContext context;
+    GrpcChannel channel;
+    RemoteEvaluation.RemoteEvaluationClient client;
+
 
     public DelayedOperationTracker(EvaluationContext context)
     {
         this.context = context;
+        this.channel = GrpcChannel.ForAddress("http://localhost:5041");
+        this.client = new RemoteEvaluation.RemoteEvaluationClient(channel);
     }
     
     public async Task DelayExecute(Guid id, ReactiveExpression wrapper, Expression expression)
@@ -60,6 +67,12 @@ class DelayedOperationTracker
         serializer.Visit(expression);
         var serialized = serializer.GetSerializedExpression();
         Console.WriteLine($"Serialized expression to '{serialized}'");
+
+        // send dummy request to grpc server to test connectivity
+        var response = await client.EvaluateExpressionAsync(new ExprRequest { Expr = "World" });
+        // write the response
+        Console.WriteLine(response.Value);
+
         var remoteExecutor = new MockRemoteEvaluator();
         object value = await remoteExecutor.Execute(serialized);
 
