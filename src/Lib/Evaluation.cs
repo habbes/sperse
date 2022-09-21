@@ -1,6 +1,6 @@
 ﻿namespace QuickSpike;
 
-class Evaluator
+public class Evaluator
 {
     EvaluationContext context = new();
 
@@ -78,14 +78,6 @@ class DelayedOperationTracker
     {
         Entry entry = this.entries[id];
         return entry.Value;
-    }
-
-    public void Work()
-    {
-        while (entries.Count > 0)
-        {
-
-        }
     }
 
     class Entry
