@@ -4,7 +4,17 @@ namespace QuickSpike;
 
 public class Evaluator
 {
-    EvaluationContext context = new();
+    EvaluationContext context;
+
+    public Evaluator()
+    {
+        this.context = new();
+    }
+
+    public Evaluator(RemoteConnector connector)
+    {
+        this.context = new(connector);
+    }
 
     public object Execute(string input)
     {
@@ -20,13 +30,16 @@ public class Evaluator
 class EvaluationContext
 {
     public SymbolTable SymbolTable { get; private set; } = new();
-    public DelayedOperationTracker DelayedTracker { get; private set; }
+    public RemoteOperationTracker DelayedTracker { get; private set; }
     public ValueTracker ValueTracker { get; private set; }
 
-    public EvaluationContext()
+    public RemoteConnector? RemoteConnector { get; private set; }
+
+    public EvaluationContext(RemoteConnector? remoteConnector = null)
     {
         this.DelayedTracker = new(this);
         this.ValueTracker = new(this);
+        RemoteConnector = remoteConnector;
     }
 }
 
@@ -41,27 +54,37 @@ class SymbolTable
 
     public object GetSymbol(string id)
     {
-        return symbols[id];
+        if (!symbols.TryGetValue(id, out var value))
+        {
+            throw new Exception($"Unknown variable '{id}'");
+        }
+
+        return value;
     }
 }
 
-class DelayedOperationTracker
+class RemoteOperationTracker
 {
     EvaluationContext context;
 
-    public DelayedOperationTracker(EvaluationContext context)
+    public RemoteOperationTracker(EvaluationContext context)
     {
         this.context = context;
     }
     
-    public async Task DelayExecute(Guid id, ReactiveExpression wrapper, Expression expression)
+    public async Task ExecuteRemote(Guid id, ReactiveExpression wrapper, Expression expression)
     {
+        if (this.context.RemoteConnector == null)
+        {
+            throw new Exception("Remote connection not established.");
+        }
+
         var serializer = new ExpressionSerializer(this.context);
         serializer.Visit(expression);
         var serialized = serializer.GetSerializedExpression();
         Console.WriteLine($"Serialized expression to '{serialized}'");
-        var remoteExecutor = new MockRemoteEvaluator();
-        object value = await remoteExecutor.Execute(serialized);
+        
+        object value = await this.context.RemoteConnector.Execute(serialized);
 
         Console.WriteLine($"Expression Id {id} completed. Value = {value}");
         this.context.ValueTracker.Update(id, value);

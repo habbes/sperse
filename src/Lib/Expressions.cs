@@ -226,7 +226,7 @@ class FutureValueExpression : ReactiveExpression
         {
             pendingValue = context.ValueTracker.Add(this);
             status = 1;
-            context.DelayedTracker.DelayExecute(pendingValue.Id, this, innerExpression);
+            context.DelayedTracker.ExecuteRemote(pendingValue.Id, this, innerExpression);
             status = 1;
             return pendingValue;
         }

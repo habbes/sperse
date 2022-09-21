@@ -1,5 +1,6 @@
 using Grpc.Core;
 using server;
+using Lib;
 
 namespace server.Services;
 
@@ -12,9 +13,12 @@ public class RemoteEvaluationService : RemoteEvaluation.RemoteEvaluationBase
     }
 
     public override Task<ExprReply> EvaluateExpression(ExprRequest request, ServerCallContext context) {
-        return Task.FromResult(new ExprReply 
+        Console.WriteLine($"Server received expression '{request.Expr}'");
+        MockRemoteEvaluator eval = new();
+        var value = eval.Execute(request.Expr);
+        return Task.FromResult(new ExprReply
         {
-            Value = request.Expr
+            Value = value.ToString()
         });
     }
 }

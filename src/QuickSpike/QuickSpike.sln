@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuickSpike", "QuickSpike.cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lib", "..\Lib\Lib.csproj", "{78CA434C-A6E3-47D1-8181-A4E7DC812155}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "server", "..\server\server.csproj", "{A7F35480-E76A-4167-BC2C-3C8306867BAD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{78CA434C-A6E3-47D1-8181-A4E7DC812155}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78CA434C-A6E3-47D1-8181-A4E7DC812155}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78CA434C-A6E3-47D1-8181-A4E7DC812155}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7F35480-E76A-4167-BC2C-3C8306867BAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7F35480-E76A-4167-BC2C-3C8306867BAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7F35480-E76A-4167-BC2C-3C8306867BAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7F35480-E76A-4167-BC2C-3C8306867BAD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

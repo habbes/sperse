@@ -1,8 +1,10 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using Lib;
 using QuickSpike;
 
-Evaluator eval = new Evaluator();
+RemoteConnector remoteConnector = new();
+Evaluator eval = new Evaluator(remoteConnector);
 
 while (true)
 {
