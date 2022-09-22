@@ -29,7 +29,9 @@ public class RemoteConnector
         try
         {
             Console.WriteLine($"Sending expression to server '{expression}'");
-            var response = await client.EvaluateExpressionAsync(new ExprRequest { Expr = expression }, deadline: DateTime.UtcNow + TimeSpan.FromSeconds(30));
+            // artificial delay to make requests take longer for demonstration purposes
+            await Task.Delay(5000);
+            var response = await client.EvaluateExpressionAsync(new ExprRequest { Expr = expression });
             // we expect all responses to be numbers for now
             int value = int.Parse(response.Value);
             return value;
