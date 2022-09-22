@@ -82,7 +82,7 @@ class RemoteOperationTracker
         var serializer = new ExpressionSerializer(this.context);
         serializer.Visit(expression);
         var serialized = serializer.GetSerializedExpression();
-        Console.WriteLine($"Serialized expression to '{serialized}'");
+        // Console.WriteLine($"Serialized expression to '{serialized}'");
         
         object value = await this.context.RemoteConnector.Execute(serialized);
 
