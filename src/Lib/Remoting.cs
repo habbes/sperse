@@ -18,7 +18,7 @@ public class RemoteConnector
     RemoteEvaluation.RemoteEvaluationClient client;
     GrpcChannel channel;
 
-    public RemoteConnector(string address = "http://localhost:5041")
+    public RemoteConnector(string address)
     {
         this.channel = GrpcChannel.ForAddress(address);
         this.client = new RemoteEvaluation.RemoteEvaluationClient(channel);

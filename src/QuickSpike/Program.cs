@@ -3,8 +3,16 @@
 using Lib;
 using QuickSpike;
 
-RemoteConnector remoteConnector = new();
+string remoteAddress = "http://localhost:5041";
+if (args.Length > 0)
+{
+    remoteAddress = args[0];
+}
+
+RemoteConnector remoteConnector = new(remoteAddress);
 Evaluator eval = new Evaluator(remoteConnector);
+
+Console.WriteLine($"Remote address {remoteAddress}");
 
 while (true)
 {
