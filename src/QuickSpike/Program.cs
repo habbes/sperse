@@ -3,7 +3,7 @@
 using Lib;
 using QuickSpike;
 
-string remoteAddress = "http://localhost:5041";
+string remoteAddress = "http://localhost:8585";
 if (args.Length > 0)
 {
     remoteAddress = args[0];
