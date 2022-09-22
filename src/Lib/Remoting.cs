@@ -26,10 +26,18 @@ public class RemoteConnector
 
     public async Task<object> Execute(string expression)
     {
-        Console.WriteLine($"Sending expression to server '{expression}'");
-        var response = await client.EvaluateExpressionAsync(new ExprRequest { Expr = expression });
-        // we expect all responses to be numbers for now
-        int value = int.Parse(response.Value);
-        return value;
+        try
+        {
+            Console.WriteLine($"Sending expression to server '{expression}'");
+            var response = await client.EvaluateExpressionAsync(new ExprRequest { Expr = expression }, deadline: DateTime.UtcNow + TimeSpan.FromSeconds(30));
+            // we expect all responses to be numbers for now
+            int value = int.Parse(response.Value);
+            return value;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ERROR: {ex.Message}");
+            throw;
+        }
     }
 }
