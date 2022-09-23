@@ -19,7 +19,8 @@ There might be multiple remote servers. The client can send expression to a part
 The PoC is meant to be quick implementation that explores the feasibility of the idea and demonstrates its key concepts practically on a reduce scope.
 
 - [x] Create basic interpreter supporting variable assignment and simple arithmetic expressions (or just +)
-- [ ] Simulate remote execution and reactive value propagation by delaying execution of expressions with `remote` keyword
-- [ ] Create server app that can execute expressions. gRPC for client-server communication
-- [ ] Implement basic code and dependency serialization
-- [ ] Send remote expressions to server for execution, propagate result values to pending variables on the client on response
+- [x] Simulate remote execution and reactive value propagation by delaying execution of expressions with `remote` keyword
+- [x] Create server app that can execute expressions. gRPC for client-server communication
+- [x] Implement basic code and dependency serialization
+- [x] Send remote expressions to server for execution, propagate result values to pending variables on the client on response
+- [ ] Add support for more operations? (functions, loops, arrays, etc.)
