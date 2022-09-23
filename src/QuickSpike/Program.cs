@@ -2,6 +2,9 @@
 
 using Lib;
 using QuickSpike;
+using System.Text;
+
+const int IndentSize = 2;
 
 string remoteAddress = "http://localhost:8585";
 if (args.Length > 0)
@@ -14,10 +17,13 @@ Evaluator eval = new Evaluator(remoteConnector);
 
 Console.WriteLine($"Remote address {remoteAddress}");
 
+int pendingBraces = 0;
+StringBuilder sourceBuffer = new();
+
 while (true)
 {
-    string input = GetNextInput().Trim();
-    if (input == "exit")
+    string input = GetNextInput(indentLevel: pendingBraces).Trim();
+    if (input == ".exit")
     {
         Console.WriteLine("Bye!");
         break;
@@ -28,9 +34,33 @@ while (true)
         continue;
     }
 
+    if (input.EndsWith('{'))
+    {
+        pendingBraces++;
+    }
+
+    if (input.EndsWith('}'))
+    {
+        pendingBraces--;
+    }
+
+    if (sourceBuffer.Length > 0)
+    {
+        sourceBuffer.AppendLine();
+    }
+
+    sourceBuffer.Append(input);
+
+    if (pendingBraces > 0)
+    {
+        continue;
+    }
+
     try
     {
-        object value = eval.Execute(input);
+        string source = sourceBuffer.ToString();
+        sourceBuffer = new();
+        object value = eval.Execute(source);
         Console.WriteLine(value);
     }
     catch (Exception e)
@@ -40,9 +70,10 @@ while (true)
     
 }
 
-string GetNextInput(string prompt = ">> ")
+string GetNextInput(string prompt = ">> ", int indentLevel = 0)
 {
     Console.Write(prompt);
+    Indent(indentLevel, IndentSize);
     string? input = Console.ReadLine();
     if (input == null)
     {
@@ -50,6 +81,13 @@ string GetNextInput(string prompt = ">> ")
     }
 
     return input;
+}
+
+void Indent(int indentLevel, int indentSize)
+{
+    char[] buffer = new char[indentLevel * indentSize];
+    Array.Fill(buffer, ' ');
+    Console.Write(buffer);
 }
 
 

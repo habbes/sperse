@@ -12,12 +12,17 @@ class Lexer
 {
     private static readonly TokenRule[] TokenRules = new[]
     {
+        new TokenRule(new Regex(@"^(?:\r\n)+"), TokenType.NewLine),
         new TokenRule(new Regex(@"^\s+"), TokenType.WhiteSpace),
         new TokenRule(new Regex(@"^\("), TokenType.OpenParen),
         new TokenRule(new Regex(@"^\)"), TokenType.ClosedParen),
+        new TokenRule(new Regex(@"^\{"), TokenType.OpenBrace),
+        new TokenRule(new Regex(@"^\}"), TokenType.ClosedBrace),
         new TokenRule(new Regex(@"^="), TokenType.Assgn),
         new TokenRule(new Regex(@"^\+"), TokenType.Plus),
+        new TokenRule(new Regex(@"^\,"), TokenType.Comma),
         new TokenRule(new Regex(@"^remote"), TokenType.Remote),
+        new TokenRule(new Regex(@"^def"), TokenType.Def),
         new TokenRule(new Regex(@"^[1-9]\d*"), TokenType.IntConst),
         new TokenRule(new Regex(@"^[a-zA-Z\.]+"), TokenType.Identifier),
     };
@@ -91,15 +96,20 @@ record struct TokenRule(Regex Rule, TokenType Type);
 
 enum TokenType
 {
+    Eof,
     Identifier,
     Remote,
+    Def,
     IntConst,
     Assgn,
     Plus,
     OpenParen,
     ClosedParen,
-    WhiteSpace,
-    Eof
+    OpenBrace,
+    ClosedBrace,
+    Comma,
+    NewLine,
+    WhiteSpace
 }
 
 class Parser
@@ -116,6 +126,11 @@ class Parser
         if (this.tokens.IsNextOfType(TokenType.Remote))
         {
             return this.ParseRemote();
+        }
+
+        if (this.tokens.IsNextOfType(TokenType.OpenBrace))
+        {
+            return this.ParseBlock();
         }
 
         Token token;
@@ -141,6 +156,7 @@ class Parser
         {
             return new IntExpression(int.Parse(token.Value));
         }
+
 
         throw new Exception(string.Format("Unexpected token {0}", token));
     }
@@ -177,6 +193,32 @@ class Parser
         }
 
         throw new Exception($"Unexpected operand token {token}");
+    }
+
+    private Expression ParseBlock()
+    {
+        this.tokens.ConsumeType(TokenType.OpenBrace);
+        this.tokens.ConsumeType(TokenType.NewLine);
+        var expressions = this.ParseExpressionList();
+        this.tokens.ConsumeType(TokenType.ClosedBrace);
+        return new BlockExpression(expressions);
+    }
+
+    private IReadOnlyCollection<Expression> ParseExpressionList()
+    {
+        List<Expression> expressions = new();
+        expressions.Add(ParseExpression());
+        while (this.tokens.TryConsumeType(TokenType.NewLine, out _))
+        {
+            if (this.tokens.IsNextOfType(TokenType.ClosedBrace))
+            {
+                return expressions;
+            }
+
+            expressions.Add(ParseExpression());
+        }
+
+        return expressions;
     }
 
     private Expression ParseRemote()
@@ -240,6 +282,17 @@ class TokenStream : IDisposable
         return true;
     }
 
+    public bool TryConsumeType(TokenType type, out Token token)
+    {
+        token = default;
+        if (!IsNextOfType(type))
+        {
+            return false;
+        }
+
+        return TryConsume(out token);
+    }
+
     public bool TryPeekAfterNext(out Token token)
     {
         Debug.Assert(peekBuffer.Count <= 2);
@@ -254,7 +307,7 @@ class TokenStream : IDisposable
         {
             // TODO: use a queue that allows efficiently peeking ahead
             token = peekBuffer.ElementAt(1);
-            return false;
+            return true;
         }
 
         if (peekBuffer.Count == 1)
@@ -315,7 +368,7 @@ class TokenStream : IDisposable
         }
 
         peeked = peekBuffer.Peek();
-        return false;
+        return true;
     }
 
     private Token ConsumeInternal()

@@ -207,6 +207,38 @@ class VarExpression : Expression
     }
 }
 
+class BlockExpression : Expression
+{
+    private IReadOnlyCollection<Expression> expressions;
+
+    public BlockExpression(IReadOnlyCollection<Expression> expressions)
+    {
+        this.expressions = expressions;
+    }
+
+    public IReadOnlyCollection<Expression> Expressions => expressions;
+
+    public override object Evaluate(EvaluationContext context)
+    {
+        foreach (var expr in expressions.Take(expressions.Count - 1))
+        {
+            expr.Evaluate(context);
+        }
+
+        return expressions.Last().Evaluate(context);
+    }
+
+    public override object Update(EvaluationContext context, Guid parent, object value)
+    {
+        foreach (var expr in expressions.Take(expressions.Count - 1))
+        {
+            expr.Update(context, parent, value);
+        }
+
+        return expressions.Last().Update(context, parent, value);
+    }
+}
+
 class FutureValueExpression : ReactiveExpression
 {
     private readonly Expression innerExpression;
