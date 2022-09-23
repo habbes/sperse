@@ -258,7 +258,7 @@ class Parser
     /// Parses arguments as part of a function definition
     /// </summary>
     /// <returns></returns>
-    private IReadOnlyCollection<string> ParseArgsList()
+    private IReadOnlyList<string> ParseArgsList()
     {
         List<string> args = new();
         if (this.tokens.IsNextOfType(TokenType.ClosedParen))
@@ -284,7 +284,7 @@ class Parser
     /// Parses parameters as part of a function call
     /// </summary>
     /// <returns></returns>
-    private IReadOnlyCollection<Expression> ParseExpressionParamList()
+    private IReadOnlyList<Expression> ParseExpressionParamList()
     {
         List<Expression> parameters = new();
         if (this.tokens.IsNextOfType(TokenType.ClosedParen))

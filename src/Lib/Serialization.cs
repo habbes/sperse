@@ -38,7 +38,7 @@ internal class ExpressionSerializer : ExpressionVisitor
 
     public override void VisitVar(VarExpression expression)
     {
-        this.valueStack.Push(context.SymbolTable.GetSymbol(expression.Identifier));
+        this.valueStack.Push(context.Scope.GetSymbol(expression.Identifier));
     }
 
     public string GetSerializedExpression()

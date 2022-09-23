@@ -69,11 +69,11 @@ class AssignmentExpression : Expression
         if (value is PendingValue parentPendingValue)
         {
             PendingValue pendingValue = context.ValueTracker.AddDependency(parentPendingValue.Id, this);
-            context.SymbolTable.SetSymbol(this.id, pendingValue);
+            context.Scope.SetSymbol(this.id, pendingValue);
         }
         else
         {
-            context.SymbolTable.SetSymbol(this.id, value);
+            context.Scope.SetSymbol(this.id, value);
         }
 
         return value;
@@ -81,7 +81,7 @@ class AssignmentExpression : Expression
 
     public override object Update(EvaluationContext context, Guid parent, object value)
     {
-        context.SymbolTable.SetSymbol(this.id, value);
+        context.Scope.SetSymbol(this.id, value);
         return value;
     }
 }
@@ -197,7 +197,7 @@ class VarExpression : Expression
 
     public override object Evaluate(EvaluationContext context)
     {
-        object value = context.SymbolTable.GetSymbol(this.id);
+        object value = context.Scope.GetSymbol(this.id);
         return value;
     }
 
@@ -243,9 +243,9 @@ class FunctionDefExpression : Expression
 {
     private string identifier;
     private Expression body;
-    private IReadOnlyCollection<string> args;
+    private IReadOnlyList<string> args;
 
-    public FunctionDefExpression(string identifier, IReadOnlyCollection<string> args, Expression body)
+    public FunctionDefExpression(string identifier, IReadOnlyList<string> args, Expression body)
     {
         this.identifier = identifier;
         this.body = body;
@@ -254,12 +254,12 @@ class FunctionDefExpression : Expression
 
     public string Identifier => identifier;
     public Expression Body => body;
-    public IReadOnlyCollection<string> Args => args;
+    public IReadOnlyList<string> Args => args;
 
     public override object Evaluate(EvaluationContext context)
     {
         var value = new FunctionValue(this.identifier, this.args, this.body);
-        context.SymbolTable.SetSymbol(identifier, value);
+        context.Scope.SetSymbol(identifier, value);
         return value;
     }
 
@@ -272,27 +272,47 @@ class FunctionDefExpression : Expression
 class FunctionCallExpression : Expression
 {
     private string identifier;
-    private IReadOnlyCollection<Expression> parameters;
+    private IReadOnlyList<Expression> parameters;
 
-    public FunctionCallExpression(string identifier, IReadOnlyCollection<Expression> parameters)
+    public FunctionCallExpression(string identifier, IReadOnlyList<Expression> parameters)
     {
         this.identifier = identifier;
         this.parameters = parameters;
     }
 
     public string Identifier => identifier;
-    public IReadOnlyCollection<Expression> Parameters => parameters;
+    public IReadOnlyList<Expression> Parameters => parameters;
 
     public override object Evaluate(EvaluationContext context)
     {
-        // TODO: create child scope based on params
-        FunctionValue? func = context.SymbolTable.GetSymbol(this.identifier) as FunctionValue;
+        FunctionValue? func = context.Scope.GetSymbol(this.identifier) as FunctionValue;
         if (func == null)
         {
             throw new Exception($"'{identifier}' is not a function.");
         }
 
-        return func.Body.Evaluate(context);
+        if (parameters.Count != func.Args.Count)
+        {
+            throw new Exception($"Function '{identifier}' expects {func.Args.Count} parameters but was called with {parameters.Count}.");
+        }
+
+        // TODO: track pending dependencies
+        List<object> paramValues = new List<object>();
+        foreach (var param in parameters)
+        {
+            paramValues.Add(param.Evaluate(context));
+        }
+
+        context.Scope.StartScope();
+        
+        for (int i = 0; i < parameters.Count; i++)
+        {
+            context.Scope.SetSymbol(func.Args[i], paramValues[i]);
+        }
+
+        object value = func.Body.Evaluate(context);
+        context.Scope.EndScope();
+        return value;
     }
 
     public override object Update(EvaluationContext context, Guid parent, object value)

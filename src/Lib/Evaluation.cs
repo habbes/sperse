@@ -29,7 +29,7 @@ public class Evaluator
 
 class EvaluationContext
 {
-    public SymbolTable SymbolTable { get; private set; } = new();
+    public HierarchicalScope Scope { get; private set; } = new();
     public RemoteOperationTracker DelayedTracker { get; private set; }
     public ValueTracker ValueTracker { get; private set; }
 
@@ -159,5 +159,79 @@ class ValueTracker
 
         this.expressions.Remove(id);
         this.dependencies.Remove(id);
+    }
+}
+
+interface IScope
+{
+    public object GetSymbol(string name);
+    public void SetSymbol(string name, object value);
+}
+
+class LocalScope : IScope
+{
+    private Dictionary<string, object> symbols = new();
+
+    public void SetSymbol(string id, object value)
+    {
+        symbols[id] = value;
+    }
+
+    public object GetSymbol(string id)
+    {
+        if (!symbols.TryGetValue(id, out var value))
+        {
+            throw new Exception($"Unknown variable '{id}'");
+        }
+
+        return value;
+    }
+
+    public bool TryGetSymbol(string id, out object value)
+    {
+        return symbols.TryGetValue(id, out value);
+    }
+}
+
+class HierarchicalScope : IScope
+{
+    List<LocalScope> scopes;
+
+    public HierarchicalScope()
+    {
+        scopes = new();
+        StartScope();
+    }
+
+    private IScope CurrentScope => scopes[scopes.Count - 1];
+
+    public object GetSymbol(string name)
+    {
+        int level = scopes.Count - 1;
+        while (level >= 0)
+        {
+            var scope = scopes[level];
+            if (scope.TryGetSymbol(name, out var value))
+            {
+                return value;
+            }
+        }
+
+        throw new Exception($"Unknown variable '{name}'");
+    }
+
+    public void SetSymbol(string name, object value)
+    {
+        CurrentScope.SetSymbol(name, value);
+    }
+
+    public void StartScope()
+    {
+        scopes.Add(new LocalScope());
+    }
+
+    public void EndScope()
+    {
+        scopes.RemoveAt(scopes.Count - 1);
     }
 }

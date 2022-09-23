@@ -8,4 +8,4 @@ namespace QuickSpike;
 
 record struct PendingValue(Guid Id);
 
-record FunctionValue(string Identifier, IReadOnlyCollection<string> Args, Expression Body);
+record FunctionValue(string Identifier, IReadOnlyList<string> Args, Expression Body);
