@@ -72,7 +72,7 @@ class RemoteOperationTracker
         this.context = context;
     }
     
-    public async Task ExecuteRemote(Guid id, ReactiveExpression wrapper, Expression expression)
+    public async Task ExecuteRemote(Guid id, Expression expression)
     {
         if (this.context.RemoteConnector == null)
         {

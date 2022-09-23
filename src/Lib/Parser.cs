@@ -128,6 +128,11 @@ class Parser
             return this.ParseRemote();
         }
 
+        if (this.tokens.IsNextOfType(TokenType.Def))
+        {
+            return this.ParseFunctionDef();
+        }
+
         if (this.tokens.IsNextOfType(TokenType.OpenBrace))
         {
             return this.ParseBlock();
@@ -140,9 +145,15 @@ class Parser
             {
                 return this.ParseAssignment();
             }
-            else if (token.Type == TokenType.Plus)
+            
+            if (token.Type == TokenType.Plus)
             {
                 return this.ParseAdd();
+            }
+
+            if (token.Type == TokenType.OpenParen && this.tokens.IsNextOfType(TokenType.Identifier))
+            {
+                return this.ParseFunctionCall();
             }
         }
 
@@ -219,6 +230,80 @@ class Parser
         }
 
         return expressions;
+    }
+
+    private Expression ParseFunctionDef()
+    {
+        this.tokens.ConsumeType(TokenType.Def);
+        Token idToken = this.tokens.ConsumeType(TokenType.Identifier);
+        this.tokens.ConsumeType(TokenType.OpenParen);
+        var args = this.ParseArgsList();
+        this.tokens.ConsumeType(TokenType.ClosedParen);
+        Expression body = this.ParseBlock();
+
+        return new FunctionDefExpression(idToken.Value, args, body);
+    }
+
+    private Expression ParseFunctionCall()
+    {
+        Token idToken = this.tokens.ConsumeType(TokenType.Identifier);
+        this.tokens.ConsumeType(TokenType.OpenParen);
+        var parameters = this.ParseExpressionParamList();
+        this.tokens.ConsumeType(TokenType.ClosedParen);
+
+        return new FunctionCallExpression(idToken.Value, parameters);
+    }
+
+    /// <summary>
+    /// Parses arguments as part of a function definition
+    /// </summary>
+    /// <returns></returns>
+    private IReadOnlyCollection<string> ParseArgsList()
+    {
+        List<string> args = new();
+        if (this.tokens.IsNextOfType(TokenType.ClosedParen))
+        {
+            // empty args
+            return args;
+        }
+
+        Token firstArg = this.tokens.ConsumeType(TokenType.Identifier);
+        args.Add(firstArg.Value);
+
+        while (!this.tokens.IsNextOfType(TokenType.ClosedParen))
+        {
+            this.tokens.ConsumeType(TokenType.Comma);
+            Token arg = this.tokens.ConsumeType(TokenType.Identifier);
+            args.Add(arg.Value);
+        }
+
+        return args;
+    }
+
+    /// <summary>
+    /// Parses parameters as part of a function call
+    /// </summary>
+    /// <returns></returns>
+    private IReadOnlyCollection<Expression> ParseExpressionParamList()
+    {
+        List<Expression> parameters = new();
+        if (this.tokens.IsNextOfType(TokenType.ClosedParen))
+        {
+            // empty params
+            return parameters;
+        }
+
+        Expression firstParam = this.ParseExpression();
+        parameters.Add(firstParam);
+
+        while (!this.tokens.IsNextOfType(TokenType.ClosedParen))
+        {
+            this.tokens.ConsumeType(TokenType.Comma);
+            Expression param = this.ParseExpression();
+            parameters.Add(param);
+        }
+
+        return parameters;
     }
 
     private Expression ParseRemote()

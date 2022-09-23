@@ -239,7 +239,69 @@ class BlockExpression : Expression
     }
 }
 
-class FutureValueExpression : ReactiveExpression
+class FunctionDefExpression : Expression
+{
+    private string identifier;
+    private Expression body;
+    private IReadOnlyCollection<string> args;
+
+    public FunctionDefExpression(string identifier, IReadOnlyCollection<string> args, Expression body)
+    {
+        this.identifier = identifier;
+        this.body = body;
+        this.args = args;
+    }
+
+    public string Identifier => identifier;
+    public Expression Body => body;
+    public IReadOnlyCollection<string> Args => args;
+
+    public override object Evaluate(EvaluationContext context)
+    {
+        var value = new FunctionValue(this.identifier, this.args, this.body);
+        context.SymbolTable.SetSymbol(identifier, value);
+        return value;
+    }
+
+    public override object Update(EvaluationContext context, Guid parent, object value)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+class FunctionCallExpression : Expression
+{
+    private string identifier;
+    private IReadOnlyCollection<Expression> parameters;
+
+    public FunctionCallExpression(string identifier, IReadOnlyCollection<Expression> parameters)
+    {
+        this.identifier = identifier;
+        this.parameters = parameters;
+    }
+
+    public string Identifier => identifier;
+    public IReadOnlyCollection<Expression> Parameters => parameters;
+
+    public override object Evaluate(EvaluationContext context)
+    {
+        // TODO: create child scope based on params
+        FunctionValue? func = context.SymbolTable.GetSymbol(this.identifier) as FunctionValue;
+        if (func == null)
+        {
+            throw new Exception($"'{identifier}' is not a function.");
+        }
+
+        return func.Body.Evaluate(context);
+    }
+
+    public override object Update(EvaluationContext context, Guid parent, object value)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+class FutureValueExpression : Expression
 {
     private readonly Expression innerExpression;
     public PendingValue pendingValue;
@@ -258,7 +320,7 @@ class FutureValueExpression : ReactiveExpression
         {
             pendingValue = context.ValueTracker.Add(this);
             status = 1;
-            context.DelayedTracker.ExecuteRemote(pendingValue.Id, this, innerExpression);
+            context.DelayedTracker.ExecuteRemote(pendingValue.Id, innerExpression);
             status = 1;
             return pendingValue;
         }
@@ -325,7 +387,7 @@ class FutureValueExpression : ReactiveExpression
 //    }
 //}
 
-record struct PendingValue(Guid Id);
+
 
 class ErrorValue { }
 
