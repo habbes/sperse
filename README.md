@@ -24,3 +24,4 @@ The PoC is meant to be quick implementation that explores the feasibility of the
 - [x] Implement basic code and dependency serialization
 - [x] Send remote expressions to server for execution, propagate result values to pending variables on the client on response
 - [ ] Add support for more operations? (functions, loops, arrays, etc.)
+- [ ] Connection to multiple servers?
