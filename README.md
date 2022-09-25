@@ -29,6 +29,7 @@ The PoC is meant to be quick implementation that explores the feasibility of the
   - [x] function definitions
   - [ ] function calls with pending dependencies
   - [ ] function defs and code blocks with pending dependencies? (probably not)
+- [ ] "pin" function to a specific remote server
 - [ ] Add support for more operations? (loops, conditionals, arrays, etc.)
 - [x] Connection to multiple servers?
 - [ ] Split computation across different servers (e.g. map-reduce like operations)
