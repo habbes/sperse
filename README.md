@@ -23,5 +23,12 @@ The PoC is meant to be quick implementation that explores the feasibility of the
 - [x] Create server app that can execute expressions. gRPC for client-server communication
 - [x] Implement basic code and dependency serialization
 - [x] Send remote expressions to server for execution, propagate result values to pending variables on the client on response
-- [ ] Add support for more operations? (functions, loops, arrays, etc.)
-- [ ] Connection to multiple servers?
+- [ ] Add support for functions:
+  - [x] code blocks
+  - [x] function calls
+  - [x] function definitions
+  - [ ] function calls with pending dependencies
+  - [ ] function defs and code blocks with pending dependencies? (probably not)
+- [ ] Add support for more operations? (loops, conditionals, arrays, etc.)
+- [x] Connection to multiple servers?
+- [ ] Split computation across different servers (e.g. map-reduce like operations)
