@@ -6,14 +6,9 @@ public class Evaluator
 {
     EvaluationContext context;
 
-    public Evaluator()
+    public Evaluator(RemoteManager remoteManager)
     {
-        this.context = new();
-    }
-
-    public Evaluator(RemoteConnector connector)
-    {
-        this.context = new(connector);
+        this.context = new(remoteManager);
     }
 
     public object Execute(string input)
@@ -33,13 +28,13 @@ class EvaluationContext
     public RemoteOperationTracker DelayedTracker { get; private set; }
     public ValueTracker ValueTracker { get; private set; }
 
-    public RemoteConnector? RemoteConnector { get; private set; }
+    public RemoteManager RemoteManager { get; private set; }
 
-    public EvaluationContext(RemoteConnector? remoteConnector = null)
+    public EvaluationContext(RemoteManager remoteManager)
     {
         this.DelayedTracker = new(this);
         this.ValueTracker = new(this);
-        RemoteConnector = remoteConnector;
+        RemoteManager = remoteManager;
     }
 }
 
@@ -72,9 +67,9 @@ class RemoteOperationTracker
         this.context = context;
     }
     
-    public async Task ExecuteRemote(Guid id, Expression expression)
+    public async Task ExecuteRemote(Guid id, Expression expression, string? tag)
     {
-        if (this.context.RemoteConnector == null)
+        if (this.context.RemoteManager == null)
         {
             throw new Exception("Remote connection not established.");
         }
@@ -86,7 +81,7 @@ class RemoteOperationTracker
             var serialized = serializer.GetSerializedExpression();
             // Console.WriteLine($"Serialized expression to '{serialized}'");
 
-            object value = await this.context.RemoteConnector.Execute(serialized);
+            object value = await this.context.RemoteManager.Execute(serialized, tag);
 
             Console.WriteLine($"Expression Id {id} completed. Value = {value}");
             this.context.ValueTracker.Update(id, value);

@@ -346,16 +346,18 @@ class FunctionCallExpression : Expression
     }
 }
 
-class FutureValueExpression : Expression
+class RemoteExpression : Expression
 {
     private readonly Expression innerExpression;
     public PendingValue pendingValue;
     private object? value = null;
+    private string? tag = null;
     int status = 0;
 
-    public FutureValueExpression(Expression innerExpression)
+    public RemoteExpression(Expression innerExpression, string? tag = null)
     {
         this.innerExpression = innerExpression;
+        this.tag = tag;
     }
     
     
@@ -365,7 +367,7 @@ class FutureValueExpression : Expression
         {
             pendingValue = context.ValueTracker.Add(this);
             status = 1;
-            context.DelayedTracker.ExecuteRemote(pendingValue.Id, innerExpression);
+            context.DelayedTracker.ExecuteRemote(pendingValue.Id, innerExpression, this.tag);
             status = 1;
             return pendingValue;
         }

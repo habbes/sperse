@@ -2,7 +2,7 @@
 
 `statement` -> `expression`
 
-`expression` -> `'remote'` `'('` `expression` `')'`
+`expression` -> `'remote'` `'('` `expression` `')'` | `'remote'` `'('` `expression` `','` `tag` `')'`
 
 `expression` -> `assignment` | `addition` | `id` | `constant`
 

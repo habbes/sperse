@@ -6,16 +6,25 @@ using System.Text;
 
 const int IndentSize = 2;
 
-string remoteAddress = "http://localhost:8585";
-if (args.Length > 0)
+RemoteManager remoteManager = new();
+foreach (var addressAndtags in args)
 {
-    remoteAddress = args[0];
+    string[] addressComponents = addressAndtags.Split('=', 2);
+    HashSet<string> tags;
+
+    if (addressComponents.Length > 1)
+    {
+        tags = new HashSet<string>(addressComponents[1].Split(','));
+    }
+    else
+    {
+        tags = new();
+    }
+
+    remoteManager.Add(addressComponents[0], tags);
 }
 
-RemoteConnector remoteConnector = new(remoteAddress);
-Evaluator eval = new Evaluator(remoteConnector);
-
-Console.WriteLine($"Remote address {remoteAddress}");
+Evaluator eval = new Evaluator(remoteManager);
 
 int pendingBraces = 0;
 StringBuilder sourceBuffer = new();
@@ -72,7 +81,11 @@ while (true)
 
 string GetNextInput(string prompt = ">> ", int indentLevel = 0)
 {
-    Console.Write(prompt);
+    if (indentLevel == 0)
+    {
+        Console.Write(prompt);
+    }
+
     Indent(indentLevel, IndentSize);
     string? input = Console.ReadLine();
     if (input == null)

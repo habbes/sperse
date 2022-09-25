@@ -311,8 +311,15 @@ class Parser
         this.tokens.ConsumeType(TokenType.Remote);
         this.tokens.ConsumeType(TokenType.OpenParen);
         Expression expression = this.ParseExpression();
+        string? tag = null;
+        if (this.tokens.TryConsumeType(TokenType.Comma, out _))
+        {
+            Token tagToken = this.tokens.ConsumeType(TokenType.Identifier);
+            tag = tagToken.Value;
+        }
+
         this.tokens.ConsumeType(TokenType.ClosedParen);
-        return new FutureValueExpression(expression);
+        return new RemoteExpression(expression, tag);
     }
 }
 
