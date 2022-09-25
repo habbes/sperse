@@ -40,12 +40,31 @@ abstract class ExpressionVisitor : IExpressionVisitor
         {
             this.VisitAssignment(assignmentExpression);
         }
+        else if (expression is BlockExpression block)
+        {
+            this.VisitBlock(block);
+        }
+        else if (expression is FunctionCallExpression functionCall)
+        {
+            this.VisitFunctionCall(functionCall);
+        }
+        else if (expression is FunctionDefExpression functionDef)
+        {
+            this.VisitFunctionDef(functionDef);
+        }
+        else
+        {
+            throw new Exception("Unsupported expression!");
+        }
     }
 
     public abstract void VisitAssignment(AssignmentExpression expression);
     public abstract void VisitAdd(AddExpression expression);
     public abstract void VisitIntConst(IntExpression expression);
     public abstract void VisitVar(VarExpression expression);
+    public abstract void VisitBlock(BlockExpression expression);
+    public abstract void VisitFunctionCall(FunctionCallExpression expression);
+    public abstract void VisitFunctionDef(FunctionDefExpression expression);
 }
 
 abstract class ReactiveExpression : Expression
@@ -220,12 +239,17 @@ class BlockExpression : Expression
 
     public override object Evaluate(EvaluationContext context)
     {
+        context.Scope.StartScope();
+        // TODO: pending dependency tracking
         foreach (var expr in expressions.Take(expressions.Count - 1))
         {
             expr.Evaluate(context);
         }
 
-        return expressions.Last().Evaluate(context);
+        object value = expressions.Last().Evaluate(context);
+        context.Scope.EndScope();
+
+        return value;
     }
 
     public override object Update(EvaluationContext context, Guid parent, object value)
@@ -258,6 +282,7 @@ class FunctionDefExpression : Expression
 
     public override object Evaluate(EvaluationContext context)
     {
+        // TODO: pending dependency tracking
         var value = new FunctionValue(this.identifier, this.args, this.body);
         context.Scope.SetSymbol(identifier, value);
         return value;

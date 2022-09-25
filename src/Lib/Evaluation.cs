@@ -79,15 +79,23 @@ class RemoteOperationTracker
             throw new Exception("Remote connection not established.");
         }
 
-        var serializer = new ExpressionSerializer(this.context);
-        serializer.Visit(expression);
-        var serialized = serializer.GetSerializedExpression();
-        // Console.WriteLine($"Serialized expression to '{serialized}'");
-        
-        object value = await this.context.RemoteConnector.Execute(serialized);
+        try
+        {
+            var serializer = new ExpressionSerializer(this.context);
+            serializer.Visit(expression);
+            var serialized = serializer.GetSerializedExpression();
+            // Console.WriteLine($"Serialized expression to '{serialized}'");
 
-        Console.WriteLine($"Expression Id {id} completed. Value = {value}");
-        this.context.ValueTracker.Update(id, value);
+            object value = await this.context.RemoteConnector.Execute(serialized);
+
+            Console.WriteLine($"Expression Id {id} completed. Value = {value}");
+            this.context.ValueTracker.Update(id, value);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ERROR: {ex.Message}");
+            throw;
+        }
     }
 
     public enum Status
@@ -207,17 +215,30 @@ class HierarchicalScope : IScope
 
     public object GetSymbol(string name)
     {
-        int level = scopes.Count - 1;
-        while (level >= 0)
+        if (TryGetSymbolAndLevel(name, out var value, out _))
         {
-            var scope = scopes[level];
-            if (scope.TryGetSymbol(name, out var value))
-            {
-                return value;
-            }
+            return value;
         }
 
         throw new Exception($"Unknown variable '{name}'");
+    }
+
+    public bool TryGetSymbolAndLevel(string name, out object value, out int level)
+    {
+        level = scopes.Count - 1;
+        while (level >= 0)
+        {
+            var scope = scopes[level];
+            if (scope.TryGetSymbol(name, out value))
+            {
+                return true;
+            }
+
+            level--;
+        }
+
+        value = null;
+        return false;
     }
 
     public void SetSymbol(string name, object value)

@@ -12,7 +12,7 @@ class Lexer
 {
     private static readonly TokenRule[] TokenRules = new[]
     {
-        new TokenRule(new Regex(@"^(?:\r\n)+"), TokenType.NewLine),
+        new TokenRule(new Regex(@"^(?:\r\n|\n)+"), TokenType.NewLine),
         new TokenRule(new Regex(@"^\s+"), TokenType.WhiteSpace),
         new TokenRule(new Regex(@"^\("), TokenType.OpenParen),
         new TokenRule(new Regex(@"^\)"), TokenType.ClosedParen),
