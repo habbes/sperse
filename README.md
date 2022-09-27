@@ -1,5 +1,7 @@
 # Sperse
 
+[Demo Video](https://user-images.githubusercontent.com/8460169/192595859-04756f0f-1c1d-42a4-aeb9-460edb205f38.mp4)
+
 This is an experimental system for **interactive**, **reactive**, **remote**, **distributed** computing.
 
 This is an experimental project attempting to implement a vague idea I've had for a while now. I'm building this project out of curiosity, exploration and fun. It's not trying to solve any particular problem or address any use case. **It may or may not be useful**.
